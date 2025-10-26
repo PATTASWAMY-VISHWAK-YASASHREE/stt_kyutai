@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kyutai STT Test UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status.connected .status-dot {
+            background: #28a745;
+        }
+        
+        .status.disconnected .status-dot {
+            background: #dc3545;
+        }
+        
+        .status.connecting .status-dot {
+            background: #ffc107;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #recordBtn {
+            background: #28a745;
+            color: white;
+        }
+        
+        #recordBtn:hover:not(:disabled) {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+        
+        #recordBtn.recording {
+            background: #dc3545;
+            animation: recordPulse 1.5s infinite;
+        }
+        
+        @keyframes recordPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        #stopBtn {
+            background: #6c757d;
+            color: white;
+        }
+        
+        #stopBtn:hover:not(:disabled) {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .file-input-label {
+            display: block;
+            padding: 14px 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-input-label:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .output {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .output-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .transcription {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+        }
+        
+        .transcription.empty {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #fff3cd;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .recording-indicator.active {
+            display: flex;
+        }
+        
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .error-message {
+            display: none;
+            padding: 12px 16px;
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Kyutai STT Test</h1>
+        <p class="subtitle">Real-time Speech-to-Text Testing Interface</p>
+        
+        <div class="status disconnected" id="status">
+            <span class="status-dot"></span>
+            <span id="statusText">Disconnected</span>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="recording-indicator" id="recordingIndicator">
+            <span class="recording-dot"></span>
+            <span>Recording...</span>
+        </div>
+        
+        <div class="controls">
+            <div class="button-group">
+                <button id="recordBtn">🎤 Start Recording</button>
+                <button id="stopBtn" disabled>⏹️ Stop</button>
+            </div>
+            
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept="audio/*" />
+                <label for="fileInput" class="file-input-label">📁 Upload Audio File</label>
+            </div>
+        </div>
+        
+        <div class="output">
+            <div class="output-title">Transcription Output</div>
+            <div class="transcription empty" id="transcription">No transcription yet...</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        
+        const statusEl = document.getElementById('status');
+        const statusTextEl = document.getElementById('statusText');
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const fileInput = document.getElementById('fileInput');
+        const transcriptionEl = document.getElementById('transcription');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // WebSocket connection
+        function connect() {
+            updateStatus('connecting', 'Connecting...');
+            
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onopen = () => {
+                updateStatus('connected', 'Connected');
+                showError('');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'transcription') {
+                    displayTranscription(data.text);
+                } else if (data.type === 'error') {
+                    showError(data.message);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                showError('WebSocket error occurred');
+            };
+            
+            ws.onclose = () => {
+                updateStatus('disconnected', 'Disconnected');
+                setTimeout(connect, 3000); // Auto-reconnect after 3 seconds
+            };
+        }
+        
+        function updateStatus(state, text) {
+            statusEl.className = `status ${state}`;
+            statusTextEl.textContent = text;
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.className = message ? 'error-message show' : 'error-message';
+        }
+        
+        function displayTranscription(text) {
+            transcriptionEl.textContent = text;
+            transcriptionEl.className = 'transcription';
+        }
+        
+        // Recording functionality
+        recordBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await sendAudioToServer(audioBlob);
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                recordBtn.textContent = '🔴 Recording...';
+                recordBtn.classList.add('recording');
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                recordingIndicator.classList.add('active');
+                showError('');
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                showError('Could not access microphone. Please check permissions.');
+            }
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                recordBtn.textContent = '🎤 Start Recording';
+                recordBtn.classList.remove('recording');
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                recordingIndicator.classList.remove('active');
+            }
+        });
+        
+        // File upload functionality
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                await sendAudioToServer(file);
+                fileInput.value = ''; // Reset file input
+            }
+        });
+        
+        // Send audio to server
+        async function sendAudioToServer(audioBlob) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showError('WebSocket is not connected');
+                return;
+            }
+            
+            try {
+                // Convert blob to base64
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64Audio = reader.result.split(',')[1];
+                    ws.send(JSON.stringify({
+                        type: 'audio',
+                        data: base64Audio
+                    }));
+                    displayTranscription('Processing...');
+                };
+                reader.readAsDataURL(audioBlob);
+            } catch (error) {
+                console.error('Error sending audio:', error);
+                showError('Failed to send audio to server');
+            }
+        }
+        
+        // Initialize connection on load
+        connect();
+    </script>
+</body>
+</html>

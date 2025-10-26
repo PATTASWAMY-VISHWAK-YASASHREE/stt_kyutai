@@ -47,6 +47,13 @@ class KyutaiTranscriber:
 
 	def transcribe_bytes(self, audio_bytes: bytes) -> str:
 		audio, sample_rate = audio_processor.prepare_audio(audio_bytes)
+		# If the model hasn't been loaded (skipped at startup to conserve memory),
+		# avoid attempting to load it on demand while testing the API/UI. Return
+		# a clear placeholder so the client can still validate the request/response
+		# flow without requiring the heavy model to be loaded.
+		if not self.is_ready:
+			logger.info("Model not loaded; returning placeholder transcription for UI testing")
+			return "[model not loaded - transcription skipped for lightweight test]"
 		return self.transcribe_array(audio, sample_rate)
 
 	def transcribe_file(self, path: str) -> str:

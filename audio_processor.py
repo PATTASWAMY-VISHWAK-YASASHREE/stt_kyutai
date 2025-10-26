@@ -58,11 +58,35 @@ def decode_audio(audio_bytes: bytes) -> Tuple[np.ndarray, int]:
 
 
 def ensure_mono(audio: np.ndarray) -> np.ndarray:
-    if audio.ndim == 1:
-        return audio
-    if audio.ndim == 2:
-        return audio.mean(axis=1)
-    raise ValueError(f"Unexpected audio shape: {audio.shape}")
+    """Ensure audio is a contiguous 1D mono signal."""
+    array = np.asarray(audio)
+
+    if array.ndim == 0:
+        raise ValueError("Audio array must have at least one dimension")
+
+    if array.ndim == 1:
+        return np.ascontiguousarray(array)
+
+    squeezed = np.squeeze(array)
+    if squeezed.ndim == 0:
+        raise ValueError(f"Unexpected audio shape after squeeze: {array.shape}")
+    if squeezed.ndim == 1:
+        return np.ascontiguousarray(squeezed)
+
+    sample_axis = int(np.argmax(squeezed.shape))
+    moved = np.moveaxis(squeezed, sample_axis, 0)
+
+    target_dtype = squeezed.dtype if np.issubdtype(squeezed.dtype, np.floating) else np.float32
+    if moved.shape[0] == 0:
+        return np.empty((0,), dtype=target_dtype)
+    if moved.ndim > 1:
+        collapsed = moved.reshape(moved.shape[0], -1)
+        mono = collapsed.mean(axis=1, dtype=target_dtype)
+    else:
+        mono = moved.astype(target_dtype, copy=False)
+
+    return np.ascontiguousarray(mono)
+
 
 
 def normalize_audio(audio: np.ndarray) -> np.ndarray:
@@ -82,25 +106,33 @@ def normalize_audio(audio: np.ndarray) -> np.ndarray:
 
 
 def resample_audio(audio: np.ndarray, source_rate: int, target_rate: int) -> np.ndarray:
+    mono = ensure_mono(audio)
+
     if source_rate == target_rate:
-        return audio
+        return np.ascontiguousarray(mono)
 
     if ta_resample is not None:
-        tensor = torch_from_numpy(audio)
+        tensor = torch_from_numpy(np.ascontiguousarray(mono))
         resampled = ta_resample(tensor, source_rate, target_rate)
-        return resampled.cpu().numpy()
+        resampled_np = resampled.cpu().numpy()
+        return ensure_mono(resampled_np)
 
     # Fallback to NumPy linear interpolation when torchaudio is unavailable.
-    duration = audio.shape[0] / float(source_rate)
+    duration = mono.shape[0] / float(source_rate)
     target_length = int(round(duration * target_rate))
-    target_indices = np.linspace(0, audio.shape[0] - 1, num=target_length)
-    return np.interp(target_indices, np.arange(audio.shape[0]), audio).astype(np.float32)
+    if target_length <= 0:
+        return np.ascontiguousarray(mono)
+    target_indices = np.linspace(0, mono.shape[0] - 1, num=target_length)
+    resampled = np.interp(target_indices, np.arange(mono.shape[0]), mono).astype(np.float32)
+    return np.ascontiguousarray(resampled)
 
 
 def prepare_audio(audio_bytes: bytes) -> Tuple[np.ndarray, int]:
     audio, sr = decode_audio(audio_bytes)
+    audio = ensure_mono(audio)
     audio = normalize_audio(audio)
     audio = resample_audio(audio, sr, config.TARGET_SAMPLE_RATE)
+    audio = ensure_mono(audio)
 
     if config.ENABLE_VAD:
         trimmed = trim_silence(
@@ -230,6 +262,12 @@ def voice_activity_segments(
 def _short_time_energy(audio: np.ndarray, frame_length: int, hop_length: int) -> np.ndarray:
     if frame_length <= 0 or hop_length <= 0:
         raise ValueError("frame_length and hop_length must be positive")
+
+    # Ensure audio is 1D before processing
+    if audio.ndim == 2:
+        audio = ensure_mono(audio)
+    elif audio.ndim > 2:
+        raise ValueError(f"Audio must be 1D or 2D, got {audio.ndim}D")
 
     if audio.shape[0] < frame_length:
         padded = np.pad(audio, (0, frame_length - audio.shape[0]), mode="constant")

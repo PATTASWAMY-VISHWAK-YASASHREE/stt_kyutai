@@ -7,6 +7,7 @@ Orchestrates the server, WebSocket handling, and module interactions.
 import asyncio
 import base64
 import logging
+import os
 from typing import Optional
 
 from fastapi import FastAPI, WebSocket
@@ -39,7 +40,13 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Load the model on server startup."""
-    transcriber.ensure_ready()
+    # Allow skipping model load when running a lightweight test server or
+    # when system memory is constrained. Set environment variable
+    # KYUTAI_SKIP_MODEL_LOAD=1 to prevent loading the model at startup.
+    if os.environ.get("KYUTAI_SKIP_MODEL_LOAD") in (None, "0"):
+        transcriber.ensure_ready()
+    else:
+        logger.info("Skipping model load at startup (KYUTAI_SKIP_MODEL_LOAD set)")
 
 @app.get("/")
 async def root():

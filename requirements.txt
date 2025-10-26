@@ -1,0 +1,10 @@
+# requirements.txt
+
+fastapi
+uvicorn[standard]
+torch
+torchaudio
+transformers
+soundfile
+numpy
+sentencepiece

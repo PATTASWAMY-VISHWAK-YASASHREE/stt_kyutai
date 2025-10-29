@@ -3,415 +3,1115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kyutai STT Test UI</title>
+    <title>Kyutai STT - Advanced Speech-to-Text</title>
     <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+            --white: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-radius: 16px;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --white: #1f2937;
+            --light: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --dark: #f3f4f6;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            transition: var(--transition);
         }
-        
+
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
             padding: 40px;
-            max-width: 600px;
+            max-width: 900px;
             width: 100%;
+            position: relative;
+            overflow: hidden;
         }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-        
-        .subtitle {
-            color: #666;
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
-            font-size: 14px;
         }
-        
-        .status {
+
+        .title-section {
+            flex: 1;
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 25px;
+            gap: 12px;
+        }
+
+        .logo {
+            font-size: 40px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
             font-size: 14px;
             font-weight: 500;
         }
-        
-        .status.connected {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .status.connecting {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-dot {
-            width: 10px;
-            height: 10px;
+
+        .theme-toggle {
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        
-        .status.connected .status-dot {
-            background: #28a745;
-        }
-        
-        .status.disconnected .status-dot {
-            background: #dc3545;
-        }
-        
-        .status.connecting .status-dot {
-            background: #ffc107;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-        }
-        
-        button {
-            flex: 1;
-            padding: 14px 24px;
+            background: var(--light);
             border: none;
-            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-md);
+        }
+
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .status-card.connected {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .status-card.disconnected {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .status-card.connecting {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .status-icon {
+            font-size: 24px;
+        }
+
+        .status-info h3 {
+            font-size: 12px;
+            opacity: 0.9;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-info p {
             font-size: 16px;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+            margin-top: 4px;
         }
-        
+
+        .metrics-card {
+            background: var(--light);
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+        }
+
+        .metrics-card h3 {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metrics-card p {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: 4px;
+        }
+
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .recording-indicator.active {
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .rec-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
+
+        .rec-text {
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .rec-time {
+            margin-left: auto;
+            font-weight: 700;
+            color: #92400e;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .controls {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        button {
+            padding: 16px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        button:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
-        #recordBtn {
-            background: #28a745;
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
         }
-        
-        #recordBtn:hover:not(:disabled) {
-            background: #218838;
+
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
         }
-        
-        #recordBtn.recording {
-            background: #dc3545;
-            animation: recordPulse 1.5s infinite;
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
         }
-        
+
+        .btn-success:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-success.recording {
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+            animation: recordPulse 2s infinite;
+        }
+
         @keyframes recordPulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
-        
-        #stopBtn {
-            background: #6c757d;
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
         }
-        
-        #stopBtn:hover:not(:disabled) {
-            background: #5a6268;
+
+        .btn-danger:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
         }
-        
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--text-primary);
         }
-        
-        .file-input-wrapper input[type=file] {
-            position: absolute;
-            left: -9999px;
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e5e7eb;
+            transform: translateY(-2px);
         }
-        
-        .file-input-label {
-            display: block;
-            padding: 14px 24px;
-            background: #667eea;
-            color: white;
-            border-radius: 10px;
+
+        .drop-zone {
+            border: 3px dashed var(--text-secondary);
+            border-radius: var(--border-radius);
+            padding: 40px;
             text-align: center;
-            font-size: 16px;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
+            background: var(--light);
         }
-        
-        .file-input-label:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
         }
-        
-        .output {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            min-height: 150px;
-            max-height: 300px;
-            overflow-y: auto;
+
+        .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            transform: scale(1.02);
         }
-        
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .drop-zone-text {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .drop-zone-hint {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .output-section {
+            margin-bottom: 20px;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
         .output-title {
             font-size: 14px;
             font-weight: 600;
-            color: #666;
-            margin-bottom: 10px;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
+        .output-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--light);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            padding: 0;
+        }
+
+        .icon-btn:hover {
+            background: #e5e7eb;
+            transform: scale(1.1);
+        }
+
+        .output-box {
+            background: var(--light);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+
         .transcription {
             font-size: 16px;
-            line-height: 1.6;
-            color: #333;
+            line-height: 1.8;
+            color: var(--text-primary);
             white-space: pre-wrap;
+            word-wrap: break-word;
         }
-        
+
         .transcription.empty {
-            color: #999;
+            color: var(--text-secondary);
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .transcription.processing {
+            color: var(--text-secondary);
             font-style: italic;
         }
-        
-        .recording-indicator {
-            display: none;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            background: #fff3cd;
-            border-radius: 10px;
-            margin-bottom: 15px;
+
+        .history-section {
+            margin-top: 30px;
         }
-        
-        .recording-indicator.active {
+
+        .history-item {
+            background: var(--light);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: var(--transition);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .history-item:hover {
+            border-color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .history-item-header {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
         }
-        
-        .recording-dot {
-            width: 12px;
-            height: 12px;
-            background: #dc3545;
-            border-radius: 50%;
-            animation: blink 1s infinite;
+
+        .history-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
         }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
+
+        .history-metrics {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
         }
-        
-        .error-message {
-            display: none;
-            padding: 12px 16px;
-            background: #f8d7da;
-            color: #721c24;
-            border-radius: 10px;
-            margin-bottom: 15px;
+
+        .history-text {
             font-size: 14px;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
-        
-        .error-message.show {
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--dark);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-xl);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: var(--transition);
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .toast-icon {
+            font-size: 24px;
+        }
+
+        .toast-message {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .audio-visualizer {
+            display: none;
+            height: 60px;
+            background: var(--light);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            padding: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .audio-visualizer.active {
             display: block;
+        }
+
+        .visualizer-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 100%;
+            gap: 2px;
+        }
+
+        .visualizer-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--primary), var(--secondary));
+            border-radius: 4px;
+            transition: height 0.1s;
+            min-height: 4px;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-secondary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-primary);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-row {
+                grid-template-columns: 1fr;
+            }
+
+            .status-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .toast {
+                bottom: 20px;
+                right: 20px;
+                left: 20px;
+                max-width: none;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎙️ Kyutai STT Test</h1>
-        <p class="subtitle">Real-time Speech-to-Text Testing Interface</p>
-        
-        <div class="status disconnected" id="status">
-            <span class="status-dot"></span>
-            <span id="statusText">Disconnected</span>
+    <div class="container fade-in">
+        <div class="header">
+            <div class="title-section">
+                <h1>
+                    <span class="logo">🎙️</span>
+                    Kyutai STT
+                </h1>
+                <p class="subtitle">Advanced Real-time Speech-to-Text Platform</p>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                🌙
+            </button>
         </div>
-        
-        <div class="error-message" id="errorMessage"></div>
-        
-        <div class="recording-indicator" id="recordingIndicator">
-            <span class="recording-dot"></span>
-            <span>Recording...</span>
-        </div>
-        
-        <div class="controls">
-            <div class="button-group">
-                <button id="recordBtn">🎤 Start Recording</button>
-                <button id="stopBtn" disabled>⏹️ Stop</button>
+
+        <div class="status-bar">
+            <div class="status-card disconnected" id="statusCard">
+                <span class="status-icon">⚡</span>
+                <div class="status-info">
+                    <h3>Connection</h3>
+                    <p id="statusText">Disconnected</p>
+                </div>
             </div>
             
-            <div class="file-input-wrapper">
-                <input type="file" id="fileInput" accept="audio/*" />
-                <label for="fileInput" class="file-input-label">📁 Upload Audio File</label>
+            <div class="metrics-card">
+                <h3>Transcriptions</h3>
+                <p id="transcriptionCount">0</p>
+            </div>
+            
+            <div class="metrics-card">
+                <h3>Avg Time</h3>
+                <p id="avgTime">0ms</p>
             </div>
         </div>
-        
-        <div class="output">
-            <div class="output-title">Transcription Output</div>
-            <div class="transcription empty" id="transcription">No transcription yet...</div>
+
+        <div class="recording-indicator" id="recordingIndicator">
+            <span class="rec-dot"></span>
+            <span class="rec-text">Recording in progress</span>
+            <span class="rec-time" id="recordingTime">00:00</span>
+        </div>
+
+        <div class="audio-visualizer" id="audioVisualizer">
+            <div class="visualizer-bars" id="visualizerBars"></div>
+        </div>
+
+        <div class="controls">
+            <div class="button-row">
+                <button class="btn-success" id="recordBtn">
+                    <span>🎤</span>
+                    <span>Start Recording</span>
+                </button>
+                <button class="btn-danger" id="stopBtn" disabled>
+                    <span>⏹️</span>
+                    <span>Stop</span>
+                </button>
+                <button class="btn-secondary" id="clearBtn">
+                    <span>🗑️</span>
+                    <span>Clear</span>
+                </button>
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-icon">📁</div>
+                <div class="drop-zone-text">Drop audio file here or click to upload</div>
+                <div class="drop-zone-hint">Supports: MP3, WAV, M4A, WEBM, OGG</div>
+                <input type="file" id="fileInput" accept="audio/*" />
+            </div>
+        </div>
+
+        <div class="output-section">
+            <div class="output-header">
+                <div class="output-title">📝 Live Transcription</div>
+                <div class="output-actions">
+                    <button class="icon-btn" id="copyBtn" title="Copy to clipboard">📋</button>
+                    <button class="icon-btn" id="downloadBtn" title="Download as text">💾</button>
+                </div>
+            </div>
+            <div class="output-box">
+                <div class="transcription empty" id="transcription">
+                    No transcription yet. Start recording or upload an audio file to begin.
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section" id="historySection" style="display: none;">
+            <div class="output-title" style="margin-bottom: 16px;">📚 Recent Transcriptions</div>
+            <div id="historyList"></div>
         </div>
     </div>
 
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span class="toast-message" id="toastMessage">Success!</span>
+    </div>
+
     <script>
+        // State
         let ws = null;
         let mediaRecorder = null;
         let audioChunks = [];
-        
-        const statusEl = document.getElementById('status');
-        const statusTextEl = document.getElementById('statusText');
+        let recordingStartTime = 0;
+        let recordingTimer = null;
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationFrame = null;
+        let transcriptionHistory = [];
+        let totalProcessingTime = 0;
+        let isDarkMode = false;
+
+        // Elements
+        const statusCard = document.getElementById('statusCard');
+        const statusText = document.getElementById('statusText');
         const recordBtn = document.getElementById('recordBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
         const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
         const transcriptionEl = document.getElementById('transcription');
         const recordingIndicator = document.getElementById('recordingIndicator');
-        const errorMessage = document.getElementById('errorMessage');
-        
-        // WebSocket connection
+        const recordingTime = document.getElementById('recordingTime');
+        const audioVisualizer = document.getElementById('audioVisualizer');
+        const visualizerBars = document.getElementById('visualizerBars');
+        const themeToggle = document.getElementById('themeToggle');
+        const toast = document.getElementById('toast');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastMessage = document.getElementById('toastMessage');
+        const transcriptionCount = document.getElementById('transcriptionCount');
+        const avgTime = document.getElementById('avgTime');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const historySection = document.getElementById('historySection');
+        const historyList = document.getElementById('historyList');
+
+        // Initialize visualizer bars
+        for (let i = 0; i < 50; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'visualizer-bar';
+            visualizerBars.appendChild(bar);
+        }
+
+        // WebSocket Connection
         function connect() {
-            updateStatus('connecting', 'Connecting...');
-            
+            updateStatus('connecting', 'Connecting...', '⏳');
+
             ws = new WebSocket('ws://localhost:8000/ws');
-            
+
             ws.onopen = () => {
-                updateStatus('connected', 'Connected');
-                showError('');
+                updateStatus('connected', 'Connected', '✅');
+                showToast('Connected to server', 'success', '✓');
+                startPingPong();
             };
-            
+
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.type === 'transcription') {
-                    displayTranscription(data.text);
+                    handleTranscription(data);
                 } else if (data.type === 'error') {
-                    showError(data.message);
+                    showToast(data.message, 'error', '✕');
+                } else if (data.type === 'ready') {
+                    console.log('Server ready:', data);
+                } else if (data.type === 'pong') {
+                    // Connection is alive
                 }
             };
-            
+
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                showError('WebSocket error occurred');
+                showToast('Connection error', 'error', '✕');
             };
-            
+
             ws.onclose = () => {
-                updateStatus('disconnected', 'Disconnected');
-                setTimeout(connect, 3000); // Auto-reconnect after 3 seconds
+                updateStatus('disconnected', 'Disconnected', '❌');
+                showToast('Disconnected from server', 'error', '✕');
+                setTimeout(connect, 3000);
             };
         }
-        
-        function updateStatus(state, text) {
-            statusEl.className = `status ${state}`;
-            statusTextEl.textContent = text;
+
+        function startPingPong() {
+            setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, 30000); // Ping every 30 seconds
         }
-        
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.className = message ? 'error-message show' : 'error-message';
+
+        function updateStatus(state, text, icon) {
+            statusCard.className = `status-card ${state}`;
+            statusText.textContent = text;
+            statusCard.querySelector('.status-icon').textContent = icon;
         }
-        
+
+        function handleTranscription(data) {
+            const text = data.text;
+            const processingTime = data.processing_time_ms || 0;
+
+            displayTranscription(text);
+
+            // Add to history
+            addToHistory(text, processingTime);
+
+            // Update metrics
+            updateMetrics(processingTime);
+
+            showToast('Transcription completed!', 'success', '✓');
+        }
+
         function displayTranscription(text) {
             transcriptionEl.textContent = text;
             transcriptionEl.className = 'transcription';
         }
-        
-        // Recording functionality
+
+        function addToHistory(text, processingTime) {
+            const historyItem = {
+                text,
+                processingTime,
+                timestamp: new Date(),
+            };
+
+            transcriptionHistory.unshift(historyItem);
+            if (transcriptionHistory.length > 10) {
+                transcriptionHistory.pop();
+            }
+
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (transcriptionHistory.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+
+            historySection.style.display = 'block';
+            historyList.innerHTML = '';
+
+            transcriptionHistory.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'history-item fade-in';
+                div.innerHTML = `
+                    <div class="history-item-header">
+                        <span class="history-time">${formatTime(item.timestamp)}</span>
+                        <div class="history-metrics">
+                            <span>⏱️ ${item.processingTime.toFixed(0)}ms</span>
+                            <span>📏 ${item.text.length} chars</span>
+                        </div>
+                    </div>
+                    <div class="history-text">${item.text}</div>
+                `;
+                div.onclick = () => {
+                    displayTranscription(item.text);
+                    showToast('Loaded from history', 'info', 'ℹ');
+                };
+                historyList.appendChild(div);
+            });
+        }
+
+        function updateMetrics(processingTime) {
+            transcriptionCount.textContent = transcriptionHistory.length;
+            totalProcessingTime += processingTime;
+            const avg = totalProcessingTime / transcriptionHistory.length;
+            avgTime.textContent = `${avg.toFixed(0)}ms`;
+        }
+
+        function formatTime(date) {
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) {
+                return 'Just now';
+            } else if (diff < 3600000) {
+                return `${Math.floor(diff / 60000)}m ago`;
+            } else {
+                return date.toLocaleTimeString();
+            }
+        }
+
+        // Recording
         recordBtn.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    }
+                });
+
+                // Setup visualizer
+                setupVisualizer(stream);
+
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                
+
                 mediaRecorder.ondataavailable = (event) => {
                     audioChunks.push(event.data);
                 };
-                
+
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     await sendAudioToServer(audioBlob);
-                    
+
                     // Stop all tracks
                     stream.getTracks().forEach(track => track.stop());
+                    stopVisualizer();
                 };
-                
+
                 mediaRecorder.start();
-                recordBtn.textContent = '🔴 Recording...';
-                recordBtn.classList.add('recording');
-                recordBtn.disabled = true;
-                stopBtn.disabled = false;
-                recordingIndicator.classList.add('active');
-                showError('');
+                startRecordingUI();
+                showToast('Recording started', 'info', '🎤');
             } catch (error) {
                 console.error('Error accessing microphone:', error);
-                showError('Could not access microphone. Please check permissions.');
+                showToast('Microphone access denied', 'error', '✕');
             }
         });
-        
+
         stopBtn.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
-                recordBtn.textContent = '🎤 Start Recording';
-                recordBtn.classList.remove('recording');
-                recordBtn.disabled = false;
-                stopBtn.disabled = true;
-                recordingIndicator.classList.remove('active');
+                stopRecordingUI();
+                showToast('Recording stopped', 'info', '⏹️');
             }
         });
-        
-        // File upload functionality
+
+        function startRecordingUI() {
+            recordBtn.classList.add('recording');
+            recordBtn.innerHTML = '<span>🔴</span><span>Recording...</span>';
+            recordBtn.disabled = true;
+            stopBtn.disabled = false;
+            recordingIndicator.classList.add('active');
+            audioVisualizer.classList.add('active');
+
+            recordingStartTime = Date.now();
+            recordingTimer = setInterval(updateRecordingTime, 100);
+
+            transcriptionEl.textContent = 'Recording...';
+            transcriptionEl.className = 'transcription processing';
+        }
+
+        function stopRecordingUI() {
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = '<span>🎤</span><span>Start Recording</span>';
+            recordBtn.disabled = false;
+            stopBtn.disabled = true;
+            recordingIndicator.classList.remove('active');
+            audioVisualizer.classList.remove('active');
+
+            clearInterval(recordingTimer);
+            recordingTime.textContent = '00:00';
+
+            transcriptionEl.textContent = 'Processing...';
+            transcriptionEl.className = 'transcription processing';
+        }
+
+        function updateRecordingTime() {
+            const elapsed = Date.now() - recordingStartTime;
+            const seconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            recordingTime.textContent = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Audio Visualizer
+        function setupVisualizer(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 128;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            visualize();
+        }
+
+        function visualize() {
+            if (!analyser) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            const bars = visualizerBars.children;
+            
+            for (let i = 0; i < bars.length && i < dataArray.length; i++) {
+                const height = (dataArray[i] / 255) * 100;
+                bars[i].style.height = `${Math.max(height, 5)}%`;
+            }
+
+            animationFrame = requestAnimationFrame(visualize);
+        }
+
+        function stopVisualizer() {
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+        }
+
+        // File Upload
+        dropZone.addEventListener('click', () => fileInput.click());
+
         fileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
-                await sendAudioToServer(file);
-                fileInput.value = ''; // Reset file input
+                await handleFile(file);
             }
         });
-        
-        // Send audio to server
+
+        // Drag and Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('audio/')) {
+                await handleFile(file);
+            } else {
+                showToast('Please drop an audio file', 'error', '✕');
+            }
+        });
+
+        async function handleFile(file) {
+            showToast(`Processing ${file.name}...`, 'info', '⏳');
+            transcriptionEl.textContent = 'Processing file...';
+            transcriptionEl.className = 'transcription processing';
+            await sendAudioToServer(file);
+            fileInput.value = '';
+        }
+
+        // Send Audio
         async function sendAudioToServer(audioBlob) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
-                showError('WebSocket is not connected');
+                showToast('Not connected to server', 'error', '✕');
                 return;
             }
-            
+
             try {
-                // Convert blob to base64
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const base64Audio = reader.result.split(',')[1];
@@ -419,17 +1119,91 @@
                         type: 'audio',
                         data: base64Audio
                     }));
-                    displayTranscription('Processing...');
                 };
                 reader.readAsDataURL(audioBlob);
             } catch (error) {
                 console.error('Error sending audio:', error);
-                showError('Failed to send audio to server');
+                showToast('Failed to send audio', 'error', '✕');
             }
         }
-        
-        // Initialize connection on load
+
+        // Clear
+        clearBtn.addEventListener('click', () => {
+            transcriptionEl.textContent = 'No transcription yet. Start recording or upload an audio file to begin.';
+            transcriptionEl.className = 'transcription empty';
+            showToast('Cleared', 'info', '🗑️');
+        });
+
+        // Copy
+        copyBtn.addEventListener('click', async () => {
+            const text = transcriptionEl.textContent;
+            if (text && !text.includes('No transcription')) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showToast('Copied to clipboard', 'success', '✓');
+                } catch (error) {
+                    showToast('Failed to copy', 'error', '✕');
+                }
+            }
+        });
+
+        // Download
+        downloadBtn.addEventListener('click', () => {
+            const text = transcriptionEl.textContent;
+            if (text && !text.includes('No transcription')) {
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `transcription-${Date.now()}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Downloaded', 'success', '💾');
+            }
+        });
+
+        // Theme Toggle
+        themeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+            themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+            showToast(`${isDarkMode ? 'Dark' : 'Light'} mode enabled`, 'info', isDarkMode ? '🌙' : '☀️');
+        });
+
+        // Toast Notification
+        function showToast(message, type = 'info', icon = 'ℹ') {
+            toastMessage.textContent = message;
+            toastIcon.textContent = icon;
+            toast.className = `toast ${type} show`;
+
+            setTimeout(() => {
+                toast.className = `toast ${type}`;
+            }, 3000);
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'r') {
+                    e.preventDefault();
+                    if (!recordBtn.disabled) recordBtn.click();
+                } else if (e.key === 's') {
+                    e.preventDefault();
+                    if (!stopBtn.disabled) stopBtn.click();
+                } else if (e.key === 'c') {
+                    e.preventDefault();
+                    copyBtn.click();
+                }
+            }
+        });
+
+        // Initialize
         connect();
+
+        // Show keyboard shortcuts hint
+        setTimeout(() => {
+            showToast('Tip: Ctrl+R to record, Ctrl+S to stop, Ctrl+C to copy', 'info', '💡');
+        }, 2000);
     </script>
 </body>
 </html>

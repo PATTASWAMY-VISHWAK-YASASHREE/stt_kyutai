@@ -24,6 +24,9 @@ TORCH_DTYPE: Optional[str] = "auto"  # ``"auto"`` lets Transformers pick, else e
 # Enable torch.compile for slightly faster decoding on repeated inferences (PyTorch ≥2.1).
 ENABLE_TORCH_COMPILE: bool = False
 
+# Reduce RAM usage when loading large checkpoints on CPU-only hosts.
+LOW_CPU_MEM_USAGE: bool = True
+
 # Control generation behaviour.
 MAX_NEW_TOKENS: int = 512
 NO_REPEAT_NGRAM_SIZE: int = 3
@@ -66,10 +69,9 @@ SERVER_PORT: int = 8000
 class GenerationOptions:
 	"""Fine-grained controls that can be overridden per request."""
 
-	max_new_tokens: int = MAX_NEW_TOKENS
-	no_repeat_ngram_size: int = NO_REPEAT_NGRAM_SIZE
-	temperature: float = 0.0  # Greedy by default for deterministic transcripts.
-	do_sample: bool = False
+	max_new_tokens: int = 256  # Reduced from 512 to avoid warnings on short audio
+	no_repeat_ngram_size: int = 3
+	# Removed temperature and do_sample as they're not valid for this model
 
 
 DEFAULT_GENERATION_OPTIONS = GenerationOptions()

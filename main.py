@@ -20,6 +20,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# Import from src
+from src.transcription_engine import FastTranscriptionEngine
+from src.config import ServerConfig as TranscriptionConfig, ProcessingMode
+
 # Python 3.7+ compatibility
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -164,7 +168,7 @@ class TranscriptionService:
             except ImportError:
                 model_id = 'kyutai/moshi-speech-to-text'
             
-            from transcription_engine import get_engine
+            from src.transcription_engine import get_engine
             self.transcriber = get_engine()
             # Engine auto-initializes on first use
             

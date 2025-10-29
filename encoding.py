@@ -175,8 +175,8 @@ class TranscriptionResult:
 class ProcessorConfig:
     """Configuration for audio processor."""
     max_length: int = DEFAULT_MAX_LENGTH
-    padding: Union[bool, str] = True
-    truncation: bool = True
+    padding: Union[bool, str] = False  # Kyutai model doesn't support both padding and truncation
+    truncation: bool = True  # Keep truncation, disable padding
     return_attention_mask: bool = True
     return_tensors: str = "pt"
     normalize: bool = True
@@ -377,24 +377,29 @@ class SafeInputPreparer:
         **kwargs,
     ) -> BatchFeature:
         """Prepare features using the processor."""
-        # Merge with config
+        # For Kyutai models, use minimal parameters - let the processor handle defaults
+        # DO NOT pass max_length, padding, or truncation as they cause frame truncation
         processor_kwargs = {
             "sampling_rate": sampling_rate,
             "return_tensors": self.config.return_tensors,
-            "padding": self.config.padding,
-            "truncation": self.config.truncation,
-            "max_length": self.config.max_length,
         }
-        
-        # Only add return_attention_mask if processor supports it
-        if hasattr(self.processor, 'model_input_names'):
-            if 'attention_mask' in self.processor.model_input_names:
-                processor_kwargs["return_attention_mask"] = self.config.return_attention_mask
         
         processor_kwargs.update(kwargs)
         
+        # Log audio info before processing
+        if isinstance(audio, np.ndarray):
+            logger.info(f"📊 Preparing features: audio shape={audio.shape}, sample_rate={sampling_rate}Hz, duration={len(audio)/sampling_rate:.2f}s")
+        
         # Call processor
-        return self.processor(audio=audio, **processor_kwargs)
+        features = self.processor(audio=audio, **processor_kwargs)
+        
+        # Log extracted features
+        if hasattr(features, 'input_features'):
+            logger.info(f"🔢 Extracted features shape: {features.input_features.shape}")
+        elif 'input_features' in features:
+            logger.info(f"🔢 Extracted features shape: {features['input_features'].shape}")
+        
+        return features
     
     def _simple_resample(
         self,

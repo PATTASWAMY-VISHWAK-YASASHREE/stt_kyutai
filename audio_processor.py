@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace as dataclass_replace
 from enum import Enum, auto
 from functools import lru_cache, wraps
 from pathlib import Path
@@ -215,13 +215,13 @@ class AudioData:
     
     def with_metadata(self, **kwargs) -> AudioData:
         """Create new AudioData with updated metadata."""
-        new_metadata = dataclass.replace(self.metadata, **kwargs)
-        return dataclass.replace(self, metadata=new_metadata)
+        new_metadata = dataclass_replace(self.metadata, **kwargs)
+        return dataclass_replace(self, metadata=new_metadata)
     
     def with_processing_stage(self, metrics: ProcessingMetrics) -> AudioData:
         """Add processing stage to history."""
         new_history = self.processing_history + (metrics,)
-        return dataclass.replace(self, processing_history=new_history)
+        return dataclass_replace(self, processing_history=new_history)
 
 
 class BackendProtocol(Protocol):
@@ -356,10 +356,23 @@ class SoundFileDecoder(AudioDecoder):
                 sample_rate = handle.samplerate
                 channels = handle.channels
                 
-                # Get additional metadata
+                # Get additional metadata with safe attribute access
+                bit_depth = None
+                if hasattr(handle, 'subtype_info'):
+                    subtype = handle.subtype_info
+                    if hasattr(subtype, 'bits'):
+                        bit_depth = subtype.bits
+                
+                # Get codec/format safely
+                codec = None
+                if hasattr(handle, 'format'):
+                    # handle.format might be a property or attribute
+                    fmt = handle.format
+                    codec = str(fmt) if fmt is not None else None
+                
                 metadata = AudioMetadata(
-                    codec=handle.format,
-                    bit_depth=handle.subtype_info.bits if hasattr(handle, 'subtype_info') else None,
+                    codec=codec,
+                    bit_depth=bit_depth,
                     file_size=len(audio_bytes),
                 )
                 
@@ -374,7 +387,7 @@ class SoundFileDecoder(AudioDecoder):
                 peak = np.abs(audio).max()
                 rms = np.sqrt(np.mean(audio**2))
                 
-                metadata = dataclass.replace(
+                metadata = dataclass_replace(
                     metadata,
                     peak_amplitude=float(peak),
                     rms_level=float(rms),
@@ -624,7 +637,7 @@ class AudioNormalizer:
         else:
             samples = np.clip(samples, -1.0, 1.0)
         
-        return dataclass.replace(audio_data, samples=samples)
+        return dataclass_replace(audio_data, samples=samples)
     
     @staticmethod
     def _remove_dc_offset(samples: AudioArray) -> AudioArray:
@@ -890,8 +903,10 @@ class EnhancedAudioProcessor:
                 return audio_data
                 
             except AudioDecodingError as e:
-                errors.append(f"{decoder.name}: {e}")
-                logger.debug(f"Decoder {decoder.name} failed: {e}")
+                # Convert exception to string properly
+                error_str = str(e)
+                errors.append(f"{decoder.name} decoding failed: {error_str}")
+                logger.debug(f"Decoder {decoder.name} failed: {error_str}")
         
         # All decoders failed
         error_msg = "Unable to decode audio with any available backend"
@@ -1234,14 +1249,25 @@ _processor: Optional[EnhancedAudioProcessor] = None
 _processor_lock = threading.Lock()
 
 
-def get_processor(**kwargs) -> EnhancedAudioProcessor:
-    """Get or create global processor instance (thread-safe)."""
+def get_processor(config_override: Optional[Dict[str, Any]] = None, **kwargs) -> EnhancedAudioProcessor:
+    """Get or create global processor instance (thread-safe).
+    
+    Note: config_override only applies on first creation. To change config,
+    you must create a new processor instance directly.
+    """
     global _processor
     
     if _processor is None:
         with _processor_lock:
             if _processor is None:
-                _processor = EnhancedAudioProcessor(**kwargs)
+                all_kwargs = kwargs.copy()
+                if config_override:
+                    all_kwargs['config_override'] = config_override
+                _processor = EnhancedAudioProcessor(**all_kwargs)
+    elif config_override:
+        # If config_override is provided but processor exists, update its config
+        with _processor_lock:
+            _processor.config = _processor._merge_config(config_override)
     
     return _processor
 
@@ -1255,10 +1281,15 @@ def decode_audio(audio_bytes: bytes) -> Tuple[AudioArray, int]:
 
 
 def prepare_audio(audio_bytes: bytes) -> Tuple[AudioArray, int]:
-    """Legacy API: Full processing pipeline."""
+    """Legacy API: Full processing pipeline returning mono 1D audio."""
     processor = get_processor()
-    audio_data = processor.process_audio(audio_bytes)
-    return audio_data.samples, audio_data.sample_rate
+    # Force mono output for backward compatibility
+    audio_data = processor.process_audio(audio_bytes, target_channels=1)
+    # Convert from 2D (1, samples) to 1D (samples,) for legacy API
+    samples = audio_data.samples
+    if samples.ndim == 2 and samples.shape[0] == 1:
+        samples = samples.squeeze(0)
+    return samples, audio_data.sample_rate
 
 
 def chunk_audio(

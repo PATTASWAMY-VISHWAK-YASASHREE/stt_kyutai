@@ -1,0 +1,46 @@
+=== Critical Bug Fix ===
+Date: October 29, 2025
+
+BUG: generate() argument after ** must be a mapping, not NoneType
+
+ROOT CAUSE:
+The `prepare_inputs()` function in encoding.py was missing a return statement.
+This caused `inputs` to be None when passed to model.generate(**inputs, **gen_kwargs).
+
+CODE LOCATION: c:\stt_kyutai\encoding.py, lines 12-26
+
+BEFORE (BROKEN):
+```python
+def prepare_inputs(...) -> BatchFeature:
+    """Prepare model inputs on the desired device."""
+    features = processor(
+        audio=audio_samples,
+        sampling_rate=sampling_rate,
+        return_tensors="pt",
+        padding=True,
+        **processor_kwargs,
+    )
+    # MISSING: return statement!
+```
+
+AFTER (FIXED):
+```python
+def prepare_inputs(...) -> BatchFeature:
+    """Prepare model inputs on the desired device."""
+    features = processor(
+        audio=audio_samples,
+        sampling_rate=sampling_rate,
+        return_tensors="pt",
+        padding=True,
+        **processor_kwargs,
+    )
+    return features.to(device)  # ← ADDED
+```
+
+IMPACT:
+- Model can now receive proper input tensors
+- Transcription should work correctly through WebSocket
+- Audio processing pipeline is complete
+
+STATUS: Fixed ✅
+Server restarted with model loading successfully

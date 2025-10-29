@@ -1,0 +1,28 @@
+Tool: vscode-websearchforcopilot_webSearch
+Query: numpy audio processing librosa soundfile channel first channel last mono stereo conversion best practices
+Timestamp: 2025-10-29
+
+Key findings:
+1. **Audio shape conventions:**
+   - Mono audio: 1D array with shape (samples,)
+   - Stereo/multichannel: 2D array with shape (channels, samples) OR (samples, channels)
+
+2. **Library-specific formats:**
+   - **librosa**: Returns (channels, samples) for multichannel, (samples,) for mono
+   - **soundfile**: Returns (samples, channels) - channels-last format
+   - **torchaudio**: Returns (channels, samples) by default with channels_first=True
+
+3. **Best practices:**
+   - Always use np.ascontiguousarray() after transposing to ensure C-contiguous memory layout
+   - Detect format by checking which dimension is smaller (usually channels < samples)
+   - Convert to consistent internal format (mono 1D) for processing
+
+---
+
+Query: soundfile torchaudio load audio shape channels samples numpy array format convention
+Timestamp: 2025-10-29
+
+Key findings:
+1. **soundfile.read()**: Returns (samples, channels) - channels-last
+2. **torchaudio.load()**: Returns (channels, samples) by default - channels-first
+3. **Conversion**: Use np.transpose() or .T, then np.ascontiguousarray() for safety

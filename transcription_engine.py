@@ -20,12 +20,19 @@ import torch
 from numpy.typing import NDArray
 
 # Import our modules
-from audio_processing import AudioData, AudioProcessor, get_processor as get_audio_processor
-from encoding import SafeInputPreparer, SafeDecoder, SimpleAggregator, to_thread
+from audio_processor import AudioData, EnhancedAudioProcessor, get_processor as get_audio_processor
+from encoding import SafeInputPreparer, SafeDecoder, SimpleTranscriptAggregator
 from model_loader import ModelLoader, ModelBundle, get_model_loader
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+# Helper for async operations
+async def to_thread(func, *args, **kwargs):
+    """Run a sync function in a thread pool."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
 
 # Type aliases
 AudioArray = NDArray[np.float32]
@@ -250,26 +257,31 @@ class FastTranscriptionEngine:
         """Get audio processing config based on mode."""
         configs = {
             ProcessingMode.ULTRA_FAST: {
+                'TARGET_SAMPLE_RATE': 24000,
                 'PEAK_NORMALIZE': False,
                 'NORMALIZE_L2': False,
                 'ENABLE_VAD': False,
             },
             ProcessingMode.FAST: {
+                'TARGET_SAMPLE_RATE': 24000,
                 'PEAK_NORMALIZE': True,
                 'NORMALIZE_L2': False,
                 'ENABLE_VAD': False,
             },
             ProcessingMode.BALANCED: {
+                'TARGET_SAMPLE_RATE': 24000,
                 'PEAK_NORMALIZE': True,
                 'NORMALIZE_L2': False,
                 'ENABLE_VAD': True,
             },
             ProcessingMode.QUALITY: {
+                'TARGET_SAMPLE_RATE': 24000,
                 'PEAK_NORMALIZE': True,
                 'NORMALIZE_L2': True,
                 'ENABLE_VAD': True,
             },
             ProcessingMode.MAXIMUM_QUALITY: {
+                'TARGET_SAMPLE_RATE': 24000,
                 'PEAK_NORMALIZE': True,
                 'NORMALIZE_L2': True,
                 'ENABLE_VAD': True,
@@ -309,7 +321,7 @@ class FastTranscriptionEngine:
     
     def warmup(self) -> None:
         """
-        Warmup the engine (load model, compile, etc).
+        Warmup the engine (load model, prepare components).
         Call this once at startup for faster first transcription.
         """
         logger.info("🔥 Warming up engine...")
@@ -328,13 +340,9 @@ class FastTranscriptionEngine:
             config=None,
         )
         
-        # Warmup inference with dummy audio
-        try:
-            dummy_audio = np.random.randn(16000).astype(np.float32) * 0.01
-            _ = self.transcribe(dummy_audio, sample_rate=16000)
-            logger.info(f"✅ Warmup complete ({(time.perf_counter() - start)*1000:.0f}ms)")
-        except Exception as e:
-            logger.warning(f"Warmup inference failed: {e}")
+        # Skip dummy audio inference - only process real user input
+        logger.info(f"✅ Warmup complete ({(time.perf_counter() - start)*1000:.0f}ms)")
+
     
     def transcribe(
         self,
@@ -376,6 +384,10 @@ class FastTranscriptionEngine:
             audio_data = self._prepare_audio(audio, sample_rate)
             metrics.audio_decode_ms = (time.perf_counter() - start) * 1000
             metrics.audio_duration_s = audio_data.duration
+            
+            logger.info(f"📥 Received audio: duration={audio_data.duration:.2f}s, "
+                       f"channels={audio_data.channels}, sample_rate={audio_data.sample_rate}Hz, "
+                       f"samples shape={audio_data.samples.shape}")
             
             # 2. Prepare model inputs
             start = time.perf_counter()
@@ -577,7 +589,7 @@ class FastTranscriptionEngine:
         Yields:
             TranscriptionResult for each chunk
         """
-        aggregator = SimpleAggregator()
+        aggregator = SimpleTranscriptAggregator()
         chunks = []
         
         for audio_chunk in audio_stream:
@@ -633,6 +645,18 @@ class FastTranscriptionEngine:
         else:
             mono = audio_data.samples[0]
         
+        # Log audio statistics for debugging
+        audio_rms = np.sqrt(np.mean(mono**2))
+        audio_max = np.abs(mono).max()
+        audio_min = np.abs(mono).min()
+        logger.info(f"🔊 Audio stats: duration={audio_data.duration:.2f}s, samples={len(mono)}, "
+                   f"RMS={audio_rms:.6f}, max={audio_max:.6f}, min={audio_min:.6f}, "
+                   f"sample_rate={audio_data.sample_rate}Hz")
+        
+        # Check if audio is essentially silent
+        if audio_rms < 0.001:
+            logger.warning(f"⚠️ Audio appears to be silent or very quiet (RMS={audio_rms:.6f})")
+        
         # Use input preparer
         return self.input_preparer.prepare_single(
             mono,
@@ -659,7 +683,7 @@ class FastTranscriptionEngine:
     
     def _decode_outputs(self, outputs: Any) -> str:
         """Decode model outputs."""
-        return self.decoder.decode_single(outputs, skip_special_tokens=True, clean=True)
+        return self.decoder.decode_single(outputs, skip_special_tokens=True, clean_output=True)
     
     def get_stats(self) -> Dict[str, Any]:
         """Get engine statistics."""

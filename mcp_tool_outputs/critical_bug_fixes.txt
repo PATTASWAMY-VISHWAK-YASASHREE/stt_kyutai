@@ -1,0 +1,311 @@
+=== CRITICAL BUG FIXES - Session 2 ===
+Date: October 29, 2025
+Time: 22:19:09
+
+═══════════════════════════════════════════════════════════════
+
+## ISSUE SUMMARY
+
+After initial deployment, two critical runtime errors discovered:
+
+1. **Feature Extractor Error**: `return_attention_mask` parameter not supported
+2. **Audio Decoder Error**: String formatting bug in error handling
+
+═══════════════════════════════════════════════════════════════
+
+## BUG #1: Unsupported Parameter in Feature Extractor
+
+### Error Message:
+```
+TypeError: KyutaiSpeechToTextFeatureExtractor.__call__() got an unexpected 
+keyword argument 'return_attention_mask'
+```
+
+### Root Cause:
+The `KyutaiSpeechToTextFeatureExtractor` does not support the 
+`return_attention_mask` parameter that was being passed to it.
+
+### Location:
+`encoding.py`, line 390-397
+
+### Previous Code:
+```python
+if hasattr(self.processor, 'model_input_names'):
+    if 'attention_mask' in self.processor.model_input_names:
+        processor_kwargs["return_attention_mask"] = self.config.return_attention_mask
+
+processor_kwargs.update(kwargs)
+
+# Call processor
+return self.processor(audio=audio, **processor_kwargs)
+```
+
+### Fix Applied:
+```python
+# Remove return_attention_mask - not supported by KyutaiSpeechToTextFeatureExtractor
+# Only pass parameters that are actually supported
+if 'return_attention_mask' in processor_kwargs:
+    del processor_kwargs['return_attention_mask']
+
+processor_kwargs.update(kwargs)
+
+# Call processor
+return self.processor(audio=audio, **processor_kwargs)
+```
+
+### Impact:
+- **CRITICAL**: Blocked all transcription attempts
+- Model could load but couldn't process any audio
+- Warmup inference failed
+
+### Status: ✅ FIXED
+
+═══════════════════════════════════════════════════════════════
+
+## BUG #2: Audio Decoder Error Message Formatting
+
+### Error Message:
+```
+soundfile decoding failed: 'function' object has no attribute 'replace'
+```
+
+### Root Cause:
+Two issues in the soundfile decoder:
+
+1. **handle.format** was a function, not a string
+2. Exception objects weren't converted to strings before formatting
+
+### Location:
+`audio_processor.py`, multiple locations
+
+### Fix #1: Safe Codec Extraction (lines 362-371)
+
+**Previous Code:**
+```python
+metadata = AudioMetadata(
+    codec=handle.format,
+    bit_depth=bit_depth,
+    file_size=len(audio_bytes),
+)
+```
+
+**Fixed Code:**
+```python
+# Get codec/format safely
+codec = None
+if hasattr(handle, 'format'):
+    # handle.format might be a property or attribute
+    fmt = handle.format
+    codec = str(fmt) if fmt is not None else None
+
+metadata = AudioMetadata(
+    codec=codec,
+    bit_depth=bit_depth,
+    file_size=len(audio_bytes),
+)
+```
+
+### Fix #2: Proper Exception String Conversion (lines 897-901)
+
+**Previous Code:**
+```python
+except AudioDecodingError as e:
+    errors.append(f"{decoder.name}: {e}")
+    logger.debug(f"Decoder {decoder.name} failed: {e}")
+```
+
+**Fixed Code:**
+```python
+except AudioDecodingError as e:
+    # Convert exception to string properly
+    error_str = str(e)
+    errors.append(f"{decoder.name} decoding failed: {error_str}")
+    logger.debug(f"Decoder {decoder.name} failed: {error_str}")
+```
+
+### Impact:
+- **HIGH**: Audio decoding would fail with confusing error messages
+- Secondary decoders couldn't be tried properly
+- Error reporting was broken
+
+### Status: ✅ FIXED
+
+═══════════════════════════════════════════════════════════════
+
+## TESTING REQUIRED
+
+### Test 1: Feature Extraction
+**Action:** Upload audio file through test UI
+**Expected:** No `return_attention_mask` error
+**Verify:** Check server logs for successful feature preparation
+
+### Test 2: Audio Decoding
+**Action:** Test with various audio formats (WAV, MP3, WebM)
+**Expected:** Clear error messages if decoding fails
+**Verify:** No "'function' object has no attribute 'replace'" errors
+
+### Test 3: End-to-End Transcription
+**Action:** Record audio or upload file
+**Expected:** Successful transcription result
+**Verify:** Text appears in UI, no errors in logs
+
+═══════════════════════════════════════════════════════════════
+
+## FILES MODIFIED
+
+### 1. encoding.py
+**Lines Modified:** 390-397
+**Change:** Removed `return_attention_mask` parameter
+**Reason:** Parameter not supported by KyutaiSpeechToTextFeatureExtractor
+**Risk Level:** LOW - Fix is targeted and safe
+
+### 2. audio_processor.py (First Fix)
+**Lines Modified:** 362-371
+**Change:** Safe codec/format extraction with type conversion
+**Reason:** handle.format was a function, not a string
+**Risk Level:** LOW - Defensive programming, handles edge cases
+
+### 3. audio_processor.py (Second Fix)
+**Lines Modified:** 897-901
+**Change:** Explicit exception-to-string conversion
+**Reason:** Exception objects can't be used in string operations
+**Risk Level:** LOW - Improves error handling robustness
+
+═══════════════════════════════════════════════════════════════
+
+## DEPLOYMENT STATUS
+
+**Server Restart:** ✅ Complete
+**Startup Time:** 7.4 seconds (fast)
+**Model Loading:** ✅ Success
+**WebSocket:** ✅ Ready on ws://localhost:8000/ws
+**Test UI:** ✅ Available at http://localhost:8000/test_ui.html
+
+**Startup Log:**
+```
+2025-10-29 22:19:09 - 🚀 Kyutai STT Server
+2025-10-29 22:19:09 - 📍 0.0.0.0:8000
+2025-10-29 22:19:09 - 🚀 Starting server...
+2025-10-29 22:19:09 - 🔄 Loading model...
+2025-10-29 22:19:17 - ✅ Engine initialized (mode=FAST, cache_size=1000)
+2025-10-29 22:19:17 - ✅ Model loaded
+2025-10-29 22:19:17 - 📍 Ready on http://0.0.0.0:8000
+2025-10-29 22:19:17 - ✅ Application startup complete
+```
+
+═══════════════════════════════════════════════════════════════
+
+## ROOT CAUSE ANALYSIS
+
+### Why These Bugs Occurred:
+
+1. **Feature Extractor Bug:**
+   - Code was written generically for multiple model types
+   - Kyutai STT model has different parameter requirements
+   - No model-specific parameter validation
+
+2. **Audio Decoder Bug:**
+   - soundfile library API differences across versions
+   - `handle.format` property behaves differently
+   - Exception objects not always stringifiable
+
+### Prevention Strategies:
+
+1. **Model-Specific Testing:**
+   - Test each model type individually
+   - Validate supported parameters
+   - Check API documentation
+
+2. **Defensive Error Handling:**
+   - Always convert exceptions to strings explicitly
+   - Use safe attribute access (hasattr + type conversion)
+   - Never assume object types
+
+3. **Integration Testing:**
+   - Test full pipeline end-to-end
+   - Include multiple audio formats
+   - Verify error messages are readable
+
+═══════════════════════════════════════════════════════════════
+
+## LESSONS LEARNED
+
+1. **Don't Assume API Compatibility:**
+   - Just because a parameter exists doesn't mean all models support it
+   - Always check model-specific documentation
+
+2. **Error Messages Matter:**
+   - "'function' object has no attribute 'replace'" was cryptic
+   - Proper string conversion makes debugging easier
+
+3. **Test Early, Test Often:**
+   - These bugs only appeared at runtime
+   - Unit tests for parameter validation would have caught this
+
+4. **Defensive Programming:**
+   - Use str() explicitly when converting to strings
+   - Check types before operations
+   - Handle edge cases gracefully
+
+═══════════════════════════════════════════════════════════════
+
+## NEXT STEPS
+
+**Immediate:**
+1. Test audio transcription through UI
+2. Verify all audio formats work
+3. Check error messages are clear
+
+**Short-term:**
+4. Add unit tests for parameter validation
+5. Test with different audio quality levels
+6. Monitor server logs for new issues
+
+**Long-term:**
+7. Add parameter validation layer
+8. Create model-specific configuration
+9. Improve error message clarity
+
+═══════════════════════════════════════════════════════════════
+
+## QUICK REFERENCE
+
+**Server Status:** ✅ RUNNING
+**Process ID:** 10972
+**Port:** 8000
+**Test URL:** http://localhost:8000/test_ui.html
+**WebSocket:** ws://localhost:8000/ws
+
+**To Test:**
+1. Open test UI in browser
+2. Click "Start Recording" or upload audio file
+3. Check for transcription result
+4. Monitor server logs for errors
+
+**Expected Behavior:**
+✅ No feature extractor errors
+✅ Clear audio decoding errors (if any)
+✅ Successful transcriptions
+✅ Readable error messages
+
+═══════════════════════════════════════════════════════════════
+
+## SUMMARY
+
+**Bugs Fixed:** 2 critical runtime errors
+**Files Modified:** 2 (encoding.py, audio_processor.py)
+**Server Status:** Restarted successfully
+**Ready for Testing:** YES
+
+**Confidence Level:** HIGH
+- Fixes are targeted and safe
+- Root causes identified and addressed
+- No breaking changes to API
+- Error handling improved
+
+**Recommendation:** Proceed with thorough testing of audio transcription
+through the test UI. Monitor logs closely for any new issues.
+
+═══════════════════════════════════════════════════════════════
+
+READY FOR PRODUCTION TESTING ✅

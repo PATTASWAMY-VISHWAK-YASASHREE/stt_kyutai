@@ -1,0 +1,179 @@
+=== Audio Decoding Fixes ===
+Date: October 29, 2025
+
+ISSUE: Audio decoding failures with multiple errors
+Error 1: soundfile - 'str' object has no attribute 'bits'
+Error 2: torchaudio - TorchCodec required
+
+═══════════════════════════════════════════════════════════════
+
+## ROOT CAUSES IDENTIFIED
+
+### 1. SoundFile Metadata Extraction Bug
+**Location:** audio_processor.py, line 361
+**Problem:** `handle.subtype_info` returns a STRING like 'Signed 16 bit PCM', 
+           not an object with a `bits` attribute
+**Impact:** CRITICAL - Caused all soundfile decoding to fail
+
+### 2. Missing PyDub Fallback
+**Problem:** pydub package not installed
+**Impact:** HIGH - No fallback decoder when soundfile/torchaudio fail
+
+### 3. 2D Audio Format from New API
+**Problem:** New EnhancedAudioProcessor returns 2D arrays (channels, samples)
+           but model expects 1D mono arrays
+**Impact:** HIGH - Would cause transcription failures after decoding
+
+═══════════════════════════════════════════════════════════════
+
+## FIXES APPLIED
+
+### Fix 1: Safe Metadata Extraction
+**File:** audio_processor.py, lines 358-367
+
+BEFORE (BROKEN):
+```python
+metadata = AudioMetadata(
+    codec=handle.format,
+    bit_depth=handle.subtype_info.bits if hasattr(handle, 'subtype_info') else None,
+    file_size=len(audio_bytes),
+)
+```
+
+AFTER (FIXED):
+```python
+# Get additional metadata with safe attribute access
+bit_depth = None
+if hasattr(handle, 'subtype_info'):
+    subtype = handle.subtype_info
+    if hasattr(subtype, 'bits'):
+        bit_depth = subtype.bits
+
+metadata = AudioMetadata(
+    codec=handle.format,
+    bit_depth=bit_depth,
+    file_size=len(audio_bytes),
+)
+```
+
+**Verification:**
+```
+Test Result: ✓ Fix validated
+- subtype_info is a string: "Signed 16 bit PCM"
+- Safe extraction returns None instead of crashing
+- Decoder continues to work correctly
+```
+
+### Fix 2: Mono Conversion for Legacy API
+**File:** audio_processor.py, lines 1263-1271
+
+BEFORE:
+```python
+def prepare_audio(audio_bytes: bytes) -> Tuple[AudioArray, int]:
+    processor = get_processor()
+    audio_data = processor.process_audio(audio_bytes)
+    return audio_data.samples, audio_data.sample_rate
+```
+
+AFTER:
+```python
+def prepare_audio(audio_bytes: bytes) -> Tuple[AudioArray, int]:
+    """Legacy API: Full processing pipeline returning mono 1D audio."""
+    processor = get_processor()
+    # Force mono output for backward compatibility
+    audio_data = processor.process_audio(audio_bytes, target_channels=1)
+    # Convert from 2D (1, samples) to 1D (samples,) for legacy API
+    samples = audio_data.samples
+    if samples.ndim == 2 and samples.shape[0] == 1:
+        samples = samples.squeeze(0)
+    return samples, audio_data.sample_rate
+```
+
+**Result:** Ensures 1D mono audio for model input
+
+### Fix 3: Installed PyDub Fallback
+**Command:** pip install pydub
+**Result:** ✓ Successfully installed pydub-0.25.1
+
+═══════════════════════════════════════════════════════════════
+
+## DECODER PRIORITY ORDER
+
+1. **SoundFile** (Priority 1) - Now fixed ✓
+   - High quality, fast
+   - Native WAV/FLAC/OGG support
+   
+2. **TorchAudio** (Priority 2) - Requires torchcodec
+   - GPU-accelerated decoding
+   - Not currently available
+
+3. **PyDub** (Priority 3) - Now available ✓
+   - Uses ffmpeg backend
+   - Supports all formats (MP3, M4A, WebM, etc.)
+   
+4. **Librosa** (Priority 4) - Not tested
+   - Scientific audio processing
+   - Slower but comprehensive
+
+═══════════════════════════════════════════════════════════════
+
+## TESTING
+
+### Test 1: Soundfile Attribute Access
+```python
+# Test with real WAV file
+with sf.SoundFile(io.BytesIO(audio_bytes)) as handle:
+    subtype_info: str = "Signed 16 bit PCM"  # It's a string!
+    # OLD CODE: subtype_info.bits  # ✗ AttributeError
+    # NEW CODE: Safe nested hasattr checks  # ✓ Works
+```
+
+Result: ✓ PASS
+
+### Test 2: Audio Shape Conversion
+```python
+# New API returns (1, 48000) for mono
+audio_data = processor.process_audio(bytes, target_channels=1)
+# Legacy wrapper converts to (48000,)
+samples = audio_data.samples.squeeze(0) if audio_data.samples.ndim == 2 else audio_data.samples
+```
+
+Result: ✓ Ready for testing
+
+═══════════════════════════════════════════════════════════════
+
+## ACTION REQUIRED
+
+**RESTART SERVER** to load the fixes:
+```powershell
+Stop-Process -Name python -Force -ErrorAction SilentlyContinue
+& C:\stt_kyutai\.venv\Scripts\Activate.ps1
+python main.py
+```
+
+After restart:
+1. Test with browser recording (WebM format)
+2. Test with uploaded WAV file
+3. Test with uploaded MP3 file (via PyDub fallback)
+
+═══════════════════════════════════════════════════════════════
+
+## FILES MODIFIED
+
+1. audio_processor.py
+   - Lines 358-367: Safe metadata extraction
+   - Lines 1263-1271: Mono conversion for legacy API
+
+2. requirements.txt (implied)
+   - Added: pydub==0.25.1
+
+═══════════════════════════════════════════════════════════════
+
+## EXPECTED OUTCOME
+
+✅ SoundFile decoder will work for WAV/FLAC/OGG
+✅ PyDub decoder will fallback for MP3/M4A/WebM
+✅ Model will receive correct 1D mono audio
+✅ Full transcription pipeline operational
+
+Server restart required to activate fixes.

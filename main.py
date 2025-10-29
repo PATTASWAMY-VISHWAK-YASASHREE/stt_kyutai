@@ -164,9 +164,9 @@ class TranscriptionService:
             except ImportError:
                 model_id = 'kyutai/moshi-speech-to-text'
             
-            from transcriber import KyutaiTranscriber
-            self.transcriber = KyutaiTranscriber()
-            self.transcriber.ensure_ready()
+            from transcription_engine import get_engine
+            self.transcriber = get_engine()
+            # Engine auto-initializes on first use
             
             self.is_ready = True
             logger.info("✅ Model loaded")
@@ -180,9 +180,10 @@ class TranscriptionService:
             raise RuntimeError("Not initialized")
         
         try:
-            result = self.transcriber.transcribe_bytes(audio_bytes)
+            # FastTranscriptionEngine.transcribe() returns TranscriptionResult
+            result = self.transcriber.transcribe(audio_bytes)
             self.total_transcriptions += 1
-            return result
+            return result.text  # Extract text from result
         except Exception as e:
             logger.error(f"Transcription error: {e}")
             raise

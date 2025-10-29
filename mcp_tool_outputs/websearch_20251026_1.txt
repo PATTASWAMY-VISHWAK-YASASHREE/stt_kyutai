@@ -1,0 +1,32 @@
+Query: "Since axis is `None`, must provide window_shape for all dimensions of `x`; got 1 window_shape elements and `x.ndim` is 2"
+Timestamp: 2025-10-26T00:00:00Z
+
+Results:
+1. https://numpy.org/doc/2.3/reference/generated/numpy.exceptions.AxisError.html
+   Summary: Documentation describing numpy.exceptions.AxisError and situations where axis parameters mismatch array dimensions.
+2. https://stackoverflow.com/questions/75251777/calculate-correlation-coefficients-by-creating-a-loop-with-numpy-arrays-of-diffe
+   Summary: Stack Overflow discussion involving mismatched dimensions when calculating correlations, mentions error regarding window shapes in numpy routines.
+3. https://learn.microsoft.com/en-us/troubleshoot/windows-client/setup-upgrade-and-drivers/windows-10-upgrade-error-codes
+   Summary: Unrelated Microsoft support article (low relevance).
+
+---
+
+Query: torchaudio resample output shape squeeze 1d numpy audio processing ensure mono sliding window
+Timestamp: 2025-10-26
+
+Results:
+1. https://docs.pytorch.org/audio/stable/tutorials/audio_resampling_tutorial.html
+   Summary: Official torchaudio tutorial demonstrates that resampled waveforms remain channel-first tensors, typically 2D with shape (channels, samples), and shows accessing the first channel via `waveform.numpy()[0]`.
+
+---
+
+Query: transformers OSError The paging file is too small for this operation to complete kyutai stt model load windows
+Timestamp: 2025-10-26
+
+Results:
+1. https://www.reddit.com/r/comfyui/comments/1i1ok4x/help_the_paging_file_is_too_small_for_this/
+   Summary: Community thread detailing os error 1455 when loading large models on Windows; suggests increasing virtual memory or reducing model size.
+2. https://learn.microsoft.com/en-us/answers/questions/4206515/the-paging-file-is-too-small-for-this-operation-to
+   Summary: Microsoft Q&A discussing virtual memory limits on Windows and adjusting page file settings to resolve os error 1455.
+3. https://stackoverflow.com/questions/69912123/paging-file-too-small-for-this-operation-to-complete-error-when-attempting-to
+   Summary: Stack Overflow discussion on os error 1455 during ML workloads; recommends lowering model size, enabling low-cpu RAM usage modes, or expanding page file.

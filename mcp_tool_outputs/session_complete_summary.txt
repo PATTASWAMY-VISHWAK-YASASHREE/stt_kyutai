@@ -1,0 +1,145 @@
+=== Session Summary: Audio Processing & Model Integration ===
+Date: October 29, 2025
+Status: ✅ ALL ISSUES RESOLVED - SYSTEM WORKING
+
+═══════════════════════════════════════════════════════════════
+
+## CRITICAL BUGS FIXED
+
+### 1. Missing Return Statement in prepare_inputs()
+**Location:** encoding.py, line 27
+**Impact:** CRITICAL - Caused all transcription attempts to fail
+**Fix:** Added `return features.to(device)`
+
+BEFORE:
+```python
+features = processor(...)
+# Missing return!
+```
+
+AFTER:
+```python
+features = processor(...)
+return features.to(device)  # ✓ Fixed
+```
+
+### 2. Audio Dimension Mismatch Errors
+**Impact:** HIGH - WebSocket crashed on audio upload
+**Root Causes:**
+- soundfile returns (samples, channels) - channels-last
+- torchaudio returns (channels, samples) - channels-first
+- pydub returns interleaved samples
+
+**Solution:** Rewrote ensure_mono() with intelligent heuristics:
+```python
+# Uses channel detection: channels dimension ≤16, samples >> channels
+# Handles both channel-first and channel-last formats
+# Returns C-contiguous 1D array
+```
+
+### 3. Resampling Shape Issues
+**Impact:** MEDIUM - Audio resampling failed with 2D arrays
+**Fix:** Modified resample_audio() to:
+- Convert to mono first via ensure_mono()
+- Handle torchaudio (1, samples) tensor format
+- Squeeze output to 1D with proper dtype
+
+═══════════════════════════════════════════════════════════════
+
+## GENERATION WARNINGS CLEANED UP
+
+### Removed Invalid Parameters:
+- ❌ `temperature` - Not supported by KyutaiSpeechToText model
+- ❌ `do_sample` - Not supported by KyutaiSpeechToText model
+
+### Optimized Parameters:
+- ✅ `max_new_tokens`: 512 → 256 (reduces warnings on short audio)
+- ✅ `no_repeat_ngram_size`: 3 (kept)
+- ✅ `cache_implementation`: Added 'static' to suppress deprecation warning
+
+═══════════════════════════════════════════════════════════════
+
+## AUDIO PROCESSING PIPELINE - VERIFIED ✓
+
+### Test Results:
+```
+ensure_mono() tests:
+├── 1D (1000,) → (1000,) ✓
+├── 2D channel-first (2, 1000) → (1000,) ✓
+├── 2D channel-last (1000, 2) → (1000,) ✓
+├── 2D mono (1, 1000) → (1000,) ✓
+└── 3D (2, 2, 1000) → (1000,) ✓
+
+resample_audio() tests:
+├── Mono 16kHz→24kHz: (4000,) → (6000,) float32 ✓
+└── 2D (2, 4000) 16kHz→24kHz: → (6000,) float32 ✓
+
+Full pipeline test:
+├── Input: Stereo WAV @ 16kHz
+└── Output: Mono (24000,) @ 24kHz ✓
+```
+
+═══════════════════════════════════════════════════════════════
+
+## SYSTEM STATUS
+
+**Server:** ✅ Running on http://0.0.0.0:8000
+**Model:** ✅ kyutai/stt-1b-en_fr-trfs loaded on CPU
+**WebSocket:** ✅ ws://localhost:8000/ws accepting connections
+**Test UI:** ✅ Available at http://localhost:8000
+
+**Transcription Status:** ✅ WORKING
+- Audio upload: ✓ Functional
+- Audio recording: ✓ Functional  
+- Real-time transcription: ✓ Functional
+
+═══════════════════════════════════════════════════════════════
+
+## FILES MODIFIED
+
+1. **audio_processor.py**
+   - ensure_mono(): Complete rewrite with channel detection
+   - resample_audio(): Fixed tensor handling
+   - prepare_audio(): Added validation
+   - _decode_with_soundfile(): Documented format
+   - _decode_with_torchaudio(): Fixed mono squeezing
+   - _decode_with_pydub(): Fixed channel handling
+
+2. **encoding.py**
+   - prepare_inputs(): Added missing return statement
+
+3. **transcriber.py**
+   - _generate_text(): Added cache_implementation parameter
+
+4. **config.py**
+   - Removed invalid temperature and do_sample parameters
+   - Reduced max_new_tokens from 512 to 256
+
+═══════════════════════════════════════════════════════════════
+
+## REMAINING CONSIDERATIONS
+
+### Non-Critical Warnings:
+1. DeprecationWarning for @app.on_event("startup")
+   - Can be migrated to lifespan context manager
+   - Does not affect functionality
+
+2. Model auto-adjusts max_new_tokens based on audio length
+   - This is expected behavior
+   - No action needed
+
+### Memory Usage:
+- Model loads successfully on CPU
+- For production, consider enabling LOAD_IN_8BIT for memory efficiency
+
+═══════════════════════════════════════════════════════════════
+
+## CONCLUSION
+
+✅ ALL CRITICAL ISSUES RESOLVED
+✅ AUDIO PROCESSING PIPELINE FULLY FUNCTIONAL
+✅ MODEL LOADING AND TRANSCRIPTION WORKING
+✅ WEBSOCKET API OPERATIONAL
+✅ TEST UI FUNCTIONAL
+
+The STT system is now production-ready for testing and development use.

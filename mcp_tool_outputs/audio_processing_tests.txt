@@ -1,0 +1,76 @@
+=== Audio Processing Test Results ===
+Date: 2024-01-29
+Session: Audio processing pipeline overhaul
+
+OBJECTIVE:
+Fix audio processing to properly handle various audio array shapes following industry conventions.
+
+ISSUES FIXED:
+1. Window shape dimension mismatch in VAD processing
+2. Resampled audio shape errors (1, samples) instead of (samples,)
+3. Generation kwargs None value error
+4. Inconsistent channel handling across different decoder backends
+
+RESEARCH FINDINGS:
+- soundfile: Returns (samples, channels) - channels-last format
+- torchaudio: Returns (channels, samples) - channels-first format  
+- librosa: Returns (channels, samples) for multichannel
+- np.ascontiguousarray() required after transpose for C-contiguous memory
+
+SOLUTIONS IMPLEMENTED:
+1. Rewrote ensure_mono() with intelligent channel detection:
+   - Uses heuristic: channels dimension typically <=16, samples >> channels
+   - Handles both channel-first (channels, samples) and channel-last (samples, channels)
+   - Properly averages across correct dimension
+   - Returns C-contiguous 1D array
+
+2. Fixed resample_audio():
+   - Converts to mono first via ensure_mono()
+   - Handles torchaudio tensor format (1, samples)
+   - Squeezes output to 1D (samples,)
+   - Ensures float32 dtype
+
+3. Updated prepare_audio():
+   - Added defensive validation at each stage
+   - Ensures 1D output throughout pipeline
+   - Validates final output shape
+
+4. Fixed decoder backends:
+   - _decode_with_soundfile(): Documented (samples, channels) format
+   - _decode_with_torchaudio(): Squeezes mono (1, samples) to (samples,)
+   - _decode_with_pydub(): Reshapes to (samples, channels), handles mono
+
+TEST RESULTS:
+✅ ensure_mono() tests:
+   - 1D (1000,) -> (1000,) ✓
+   - 2D channel-first (2, 1000) -> (1000,) ✓
+   - 2D channel-last (1000, 2) -> (1000,) ✓
+   - 2D mono (1, 1000) -> (1000,) ✓
+   - 3D (2, 2, 1000) -> (1000,) ✓
+
+✅ resample_audio() tests:
+   - Mono 4000 samples 16kHz->24kHz: (6000,) float32 ✓
+   - 2D (2, 4000) 16kHz->24kHz: (6000,) float32 ✓
+
+✅ prepare_audio() full pipeline test:
+   - Input: Stereo WAV, 16kHz, 64044 bytes
+   - Output: (24000,) float32 @ 24kHz ✓
+   - Audio range: [-0.014, 0.014] ✓
+   - Resampling: 16000 -> 24000 samples ✓
+
+✅ Linting:
+   - Removed unused variable 'sample_axis' ✓
+   - audio_processor.py: No errors ✓
+   - main.py: No errors ✓
+
+NEXT STEPS:
+1. Test end-to-end with real WebSocket audio transmission
+2. Verify model loads and transcribes successfully (requires pagefile expansion)
+3. Test with various audio formats (WebM from browser, MP3, WAV)
+4. Test edge cases: empty audio, single-sample, unusual channel counts
+
+CONCLUSIONS:
+The audio processing pipeline has been completely overhauled to follow industry conventions.
+All decoder backends now return properly formatted audio that flows through the pipeline
+without dimension errors. The ensure_mono() function uses intelligent heuristics to detect
+channel orientation and converts correctly to 1D mono format.

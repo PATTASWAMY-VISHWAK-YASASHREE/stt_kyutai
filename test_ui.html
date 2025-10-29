@@ -967,6 +967,11 @@
 
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    console.log('🎤 Recording stopped:', {
+                        chunks: audioChunks.length,
+                        totalSize: audioBlob.size,
+                        type: audioBlob.type
+                    });
                     await sendAudioToServer(audioBlob);
 
                     // Stop all tracks
@@ -1112,9 +1117,15 @@
             }
 
             try {
+                console.log('📤 Sending audio:', {
+                    size: audioBlob.size,
+                    type: audioBlob.type
+                });
+                
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const base64Audio = reader.result.split(',')[1];
+                    console.log('📤 Audio encoded to base64, length:', base64Audio.length);
                     ws.send(JSON.stringify({
                         type: 'audio',
                         data: base64Audio

@@ -1,0 +1,22 @@
+Analysis Phase:
+- Inspect audio pipeline to identify where 2D arrays slip through despite ensure_mono usage.
+- Determine shapes returned by each decoder backend and downstream transforms.
+- Review recent error logs to confirm reproduction conditions.
+
+Research Phase:
+- Review NumPy sliding_window_view requirements and handling of multi-dimensional inputs (numpy docs).
+- Check community discussions on converting stereo audio to mono safely before energy calculations (Stack Overflow thread from search).
+
+Implementation Phase:
+- Update ensure_mono to robustly handle channel-first and channel-last 2D shapes, returning 1D arrays.
+- Add safety assertions/logging in prepare/energy pipeline to catch unexpected dimensions.
+- Ensure VAD and chunking functions operate on validated 1D arrays.
+
+Testing Phase:
+- Add or run unit/integration test passing stereo audio from torchaudio backend.
+- Manually test through WebSocket UI with microphone and uploaded stereo file.
+- Verify backend logs show no dimension errors.
+
+Documentation Phase:
+- Update inline comments explaining audio shape assumptions.
+- Prepare summary of changes for user once validation passes.

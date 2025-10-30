@@ -7,15 +7,13 @@ __version__ = "1.0.0"
 __author__ = "Kyutai STT Team"
 __license__ = "CC BY 4.0"
 
-from .transcription_engine import FastTranscriptionEngine
+from .transcription_engine import FastTranscriptionEngine, ProcessingMode
 from .audio_processor import EnhancedAudioProcessor
 from .model_loader import ModelLoader
-from .config import ServerConfig, ProcessingMode
 
 __all__ = [
     "FastTranscriptionEngine",
     "EnhancedAudioProcessor",
     "ModelLoader",
-    "ServerConfig",
     "ProcessingMode",
 ]

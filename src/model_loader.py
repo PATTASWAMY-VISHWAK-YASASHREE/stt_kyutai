@@ -44,8 +44,8 @@ except ImportError:
 def get_config_value(key: str, default: Any) -> Any:
     """Safely get config value with fallback."""
     try:
-        import config
-        value = getattr(config, key, default)
+        from . import config as _config
+        value = getattr(_config, key, default)
         logger.debug(f"Config {key} = {value}")
         return value
     except (ImportError, AttributeError):

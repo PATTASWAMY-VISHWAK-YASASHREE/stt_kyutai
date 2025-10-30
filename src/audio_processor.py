@@ -42,7 +42,7 @@ try:
 except ImportError:
     SCIPY_AVAILABLE = False
 
-import config
+from . import config
 
 # Configure logging with structured format
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

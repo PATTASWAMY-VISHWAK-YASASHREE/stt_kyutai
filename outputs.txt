@@ -1,2 +1,5 @@
 Recorded tool outputs are stored under mcp_tool_outputs/. Latest entries include:
 - mcp_tool_outputs/websearch_20251026_1.txt (torchaudio resampling, paging file troubleshooting)
+- mcp_tool_outputs/websearch_20251029_audio.txt (real-audio inference troubleshooting)
+- mcp_tool_outputs/websearch_20251030_docker.txt (FastAPI Docker containerization best practices)
+- mcp_tool_outputs/websearch_20251030_relative_imports.txt (Python relative/absolute import guidance)

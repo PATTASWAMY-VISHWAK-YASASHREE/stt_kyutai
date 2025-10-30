@@ -27,8 +27,8 @@ DEFAULT_SAMPLE_RATE = 16000
 def get_config_value(key: str, default: Any) -> Any:
     """Safely get config value with fallback."""
     try:
-        import config
-        return getattr(config, key, default)
+        from . import config as _config
+        return getattr(_config, key, default)
     except (ImportError, AttributeError):
         logger.warning(f"Config key '{key}' not found, using default: {default}")
         return default

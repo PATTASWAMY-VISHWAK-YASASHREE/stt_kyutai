@@ -4,7 +4,10 @@ import io
 import wave
 import base64
 import json
-from main import transcription_service
+from src.transcription_engine import FastTranscriptionEngine
+
+# Global transcription engine
+transcription_service = None
 
 def generate_test_audio(duration_seconds=3, sample_rate=24000):
     """Generate a test audio file with speech-like characteristics."""
@@ -52,8 +55,9 @@ def test_transcription_with_generated_audio():
     # Test transcription
     try:
         result = transcription_service.transcribe(audio_bytes)
-        print(f"✅ Transcription result: '{result}'")
-        if result and result.strip() and result != '...':
+        transcription_text = result.text if hasattr(result, 'text') else str(result)
+        print(f"✅ Transcription result: '{transcription_text}'")
+        if transcription_text and transcription_text.strip() and transcription_text != '...':
             print("✅ Got non-empty transcription!")
         else:
             print("⚠️ Empty or punctuation-only transcription")
@@ -86,11 +90,12 @@ def test_transcription_with_silent_audio():
     # Test transcription
     try:
         result = transcription_service.transcribe(wav_bytes)
-        print(f"📝 Result: '{result}'")
-        if not result or result == '...':
+        transcription_text = result.text if hasattr(result, 'text') else str(result)
+        print(f"📝 Result: '{transcription_text}'")
+        if not transcription_text or transcription_text == '...':
             print("✅ Silent audio correctly produces empty result")
         else:
-            print(f"⚠️ Silent audio produced: '{result}'")
+            print(f"⚠️ Silent audio produced: '{transcription_text}'")
     except Exception as e:
         print(f"❌ Transcription failed: {e}")
 
@@ -102,7 +107,8 @@ def test_audio_with_varying_durations():
         audio_bytes = generate_test_audio(duration_seconds=duration, sample_rate=24000)
         try:
             result = transcription_service.transcribe(audio_bytes)
-            print(f"  {duration}s audio -> '{result}' ({len(result)} chars)")
+            transcription_text = result.text if hasattr(result, 'text') else str(result)
+            print(f"  {duration}s audio -> '{transcription_text}' ({len(transcription_text)} chars)")
         except Exception as e:
             print(f"  {duration}s audio -> ERROR: {e}")
 
@@ -113,6 +119,7 @@ if __name__ == "__main__":
     # Initialize transcription service
     print("\n🔧 Initializing transcription service...")
     try:
+        transcription_service = FastTranscriptionEngine()
         transcription_service.initialize()
         print("✅ Service initialized")
     except Exception as e:

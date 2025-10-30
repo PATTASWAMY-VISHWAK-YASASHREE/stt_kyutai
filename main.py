@@ -21,8 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # Import from src
-from src.transcription_engine import FastTranscriptionEngine
-from src.config import ServerConfig as TranscriptionConfig, ProcessingMode
+from src.transcription_engine import FastTranscriptionEngine, ProcessingMode
 
 # Python 3.7+ compatibility
 if sys.version_info >= (3, 8):
@@ -31,11 +30,17 @@ else:
     from typing_extensions import Literal
 
 # Configure logging
+_log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+_log_level_value = logging._nameToLevel.get(_log_level_name, logging.INFO)
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level_value,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
+
+if _log_level_name not in logging._nameToLevel:
+    logger.warning("LOG_LEVEL '%s' is not valid; defaulting to INFO", _log_level_name)
 
 
 class MessageType(str, Enum):
@@ -161,11 +166,11 @@ class TranscriptionService:
         try:
             logger.info("🔄 Loading model...")
             
-            # Import here to avoid circular imports
+            # Import configuration constants
             try:
-                import config
+                from src import config
                 model_id = getattr(config, 'MODEL_ID', 'kyutai/moshi-speech-to-text')
-            except ImportError:
+            except (ImportError, AttributeError):
                 model_id = 'kyutai/moshi-speech-to-text'
             
             from src.transcription_engine import get_engine

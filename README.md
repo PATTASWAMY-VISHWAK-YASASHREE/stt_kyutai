@@ -117,7 +117,40 @@ curl -X POST "http://localhost:8000/transcribe" \
 
 ---
 
-## 📡 API Documentation
+## � Docker
+
+### Build the Image
+
+```powershell
+docker build --tag stt-kyutai .
+```
+
+### Run the Container
+
+```powershell
+docker run --rm -p 8000:8000 --env-file .env stt-kyutai
+```
+
+This command mounts the API on `http://localhost:8000`. Update `.env` before running to customize the model or device.
+
+### Docker Compose
+
+```powershell
+docker compose up --build
+```
+
+The provided `docker-compose.yml`:
+
+- Builds the image from the local source
+- Binds port `8000`
+- Loads environment variables from `.env`
+- Persists Hugging Face caches in a named `huggingface-cache` volume
+
+To stop the stack, press `Ctrl+C` and run `docker compose down` when finished.
+
+---
+
+## �📡 API Documentation
 
 ### WebSocket API
 
@@ -206,9 +239,13 @@ Create a `.env` file (see `.env.example`):
 
 ```env
 # Server Configuration
-HOST=0.0.0.0
-PORT=8000
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8000
+MAX_CONNECTIONS=100
+MAX_AUDIO_SIZE_MB=10
+WS_TIMEOUT=300
 LOG_LEVEL=INFO
+KYUTAI_SKIP_MODEL_LOAD=0
 
 # Model Configuration
 MODEL_ID=kyutai/stt-1b-en_fr-trfs
@@ -218,8 +255,6 @@ DTYPE=float16
 # Performance Settings
 ENABLE_COMPILE=true
 CACHE_SIZE=1000
-MAX_AUDIO_SIZE_MB=10
-WS_TIMEOUT=300
 
 # Audio Processing
 TARGET_SAMPLE_RATE=24000
@@ -231,8 +266,12 @@ ENABLE_VAD=false
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HOST` | `0.0.0.0` | Server host address |
-| `PORT` | `8000` | Server port |
+| `SERVER_HOST` | `0.0.0.0` | Server host address |
+| `SERVER_PORT` | `8000` | Server port |
+| `MAX_CONNECTIONS` | `100` | Maximum simultaneous WebSocket clients |
+| `MAX_AUDIO_SIZE_MB` | `10` | Maximum allowed upload size |
+| `WS_TIMEOUT` | `300` | WebSocket idle timeout (seconds) |
+| `KYUTAI_SKIP_MODEL_LOAD` | `0` | Skip model load on startup (set `1` for dry-run) |
 | `MODEL_ID` | `kyutai/stt-1b-en_fr-trfs` | HuggingFace model ID |
 | `DEVICE` | `cpu` | Device for inference (`cpu`, `cuda`) |
 | `DTYPE` | `float16` | Model dtype (`float32`, `float16`) |

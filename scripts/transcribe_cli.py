@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from urllib.request import urlretrieve
 
-from transcriber import KyutaiTranscriber
+from src.transcription_engine import FastTranscriptionEngine
 
 _SAMPLE_URL = (
     "https://huggingface.co/datasets/hf-internal-testing/librispeech_asr_dummy/"
@@ -74,19 +74,18 @@ def main(argv: list[str] | None = None) -> int:
         print("Provide an audio path or use --download-sample", file=sys.stderr)
         return 1
 
-    transcriber = KyutaiTranscriber()
-    transcriber.ensure_ready()
+    # Initialize transcription engine
+    transcriber = FastTranscriptionEngine()
+    # Ensure model is loaded
+    transcriber.initialize()
+    
     if args.stream:
-        for partial in transcriber.stream_file(
-            str(audio_path),
-            chunk_seconds=args.chunk_seconds,
-            overlap_seconds=args.overlap_seconds,
-            min_char_delta=args.min_char_delta,
-        ):
-            print(partial, flush=True)
+        # For streaming, we need to adapt the API
+        print("⚠️ Streaming mode not yet adapted for FastTranscriptionEngine", file=sys.stderr)
+        return 1
     else:
-        transcript = transcriber.transcribe_file(str(audio_path))
-        print(transcript)
+        result = transcriber.transcribe_file(str(audio_path))
+        print(result.text)
     return 0
 
 

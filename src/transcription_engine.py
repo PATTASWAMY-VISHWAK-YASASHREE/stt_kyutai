@@ -20,9 +20,13 @@ import torch
 from numpy.typing import NDArray
 
 # Import our modules
-from audio_processor import AudioData, EnhancedAudioProcessor, get_processor as get_audio_processor
-from encoding import SafeInputPreparer, SafeDecoder, SimpleTranscriptAggregator
-from model_loader import ModelLoader, ModelBundle, get_model_loader
+from .audio_processor import (
+    AudioData,
+    EnhancedAudioProcessor,
+    get_processor as get_audio_processor,
+)
+from .encoding import SafeInputPreparer, SafeDecoder, SimpleTranscriptAggregator
+from .model_loader import ModelLoader, ModelBundle, get_model_loader
 
 # Configure logging
 logger = logging.getLogger(__name__)
